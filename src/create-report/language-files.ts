@@ -5,6 +5,7 @@ import Dot from 'dot-object';
 import yaml from 'js-yaml';
 import isValidGlob from 'is-valid-glob';
 import { SimpleFile, I18NLanguage, I18NItem } from '../types';
+import jsonrepair from "jsonrepair"
 
 export function readLanguageFiles (src: string): SimpleFile[] {
   if (!isValidGlob(src)) {
@@ -19,9 +20,12 @@ export function readLanguageFiles (src: string): SimpleFile[] {
 
   return targetFiles.map(f => {
     const langPath = path.resolve(process.cwd(), f);
+    const currentFolder = langPath.substring(0, langPath.lastIndexOf("/"))
+    const localeIndexFile = `${currentFolder}/index.ts`;
 
     const extension = langPath.substring(langPath.lastIndexOf('.')).toLowerCase();
     const isJSON = extension === '.json';
+    const isTS = extension === '.ts';
     const isYAML = extension === '.yaml' || extension === '.yml';
 
     let langObj;
@@ -29,8 +33,26 @@ export function readLanguageFiles (src: string): SimpleFile[] {
       langObj = JSON.parse(fs.readFileSync(langPath, 'utf8'));
     } else if (isYAML) {
       langObj = yaml.load(fs.readFileSync(langPath, 'utf8'));
+    } else if (isTS) {
+        const content = fs.readFileSync(langPath, 'utf8');
+        const indexFile = fs.readFileSync(localeIndexFile, 'utf8');
+        const cleanContent = content
+            .replace("export default", "")
+            .replace(/};/g, "}")
+            .replace(/} ;/g, "}")
+            .replace(/`/g, '"')
+        const keyPrefixRegex = new RegExp(/"en", { (\w+):/g)
+        const keyPrefix = keyPrefixRegex.exec(indexFile)
+        if (keyPrefix && keyPrefix[1]) {
+            langObj = JSON.parse(jsonrepair(cleanContent));
+            langObj = {
+                [keyPrefix[1]]: langObj
+            }
+        } else {
+            throw new Error("Could not read key prefix from locale index file");
+        }
     } else {
-      langObj = eval(fs.readFileSync(langPath, 'utf8'));
+        langObj = eval(fs.readFileSync(langPath, 'utf8'));
     }
 
     const fileName = f.replace(process.cwd(), '.');
@@ -87,9 +109,18 @@ export function removeUnusedFromLanguageFiles (parsedLanguageFiles: SimpleFile[]
   });
 }
 
+function objectAsTypescriptString (object: {[key: string]: string}): string {
+    return Object.entries(object)
+    .map(([key, value]) => {
+        return `  ${key}: '${value}'`
+    })
+    .join(',\n')
+}
+
 function writeLanguageFile (languageFile: SimpleFile, newLanguageFileContent: unknown) {
   const fileExtension = languageFile.fileName.substring(languageFile.fileName.lastIndexOf('.') + 1);
     const filePath = languageFile.path;
+    const nestedContent = Object.values(newLanguageFileContent as Record<string, Record<string, string>>)[0];
     const stringifiedContent = JSON.stringify(newLanguageFileContent, null, 2);
 
     if (fileExtension === 'json') {
@@ -100,6 +131,13 @@ function writeLanguageFile (languageFile: SimpleFile, newLanguageFileContent: un
     } else if (fileExtension === 'yaml' || fileExtension === 'yml') {
       const yamlFile = yaml.dump(newLanguageFileContent);
       fs.writeFileSync(filePath, yamlFile);
+     } else if (fileExtension === 'ts') {
+        const nestedStringifiedContent = JSON.stringify(nestedContent, null, 2);
+        console.log(`export default ${nestedStringifiedContent};`)
+        const tsFile = `export default ${nestedStringifiedContent};`;
+        // const tsFile = `export default {\n ${objectAsTypescriptString(nestedContent)} \n}; \n`;
+        // console.log(objectAsTypescriptString(nestedContent))
+        fs.writeFileSync(filePath, tsFile);
     } else {
       throw new Error(`Language filetype of ${fileExtension} not supported.`)
     }

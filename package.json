@@ -52,6 +52,7 @@
     "eslint": "^8.14.0",
     "jest": "^27.1.4",
     "jest-config": "^28.0.2",
+    "jsonrepair": "^2.2.1",
     "microbundle": "^0.15.0",
     "rimraf": "^3.0.2",
     "ts-jest": "^27.1.4",
