@@ -58,8 +58,13 @@
 
       const configFile = require(pathToConfigFile);
 
+      const exclude = argvOptions.exclude.filter(excluded => excluded !== undefined);
       console.info(`\nUsing config file found at ${pathToConfigFile}`);
-      return _extends({}, configFile, argvOptions);
+
+      const mergedOptions = _extends({}, configFile, argvOptions);
+
+      mergedOptions.exclude = [...exclude, ...(configFile.excludedKeys || [])];
+      return mergedOptions;
     } catch (_unused) {
       return argvOptions;
     }
@@ -1155,7 +1160,6 @@
       fs__default["default"].writeFileSync(filePath, yamlFile);
     } else if (fileExtension === 'ts') {
       const nestedStringifiedContent = JSON.stringify(nestedContent, null, 2);
-      console.log(`export default ${nestedStringifiedContent};`);
       const tsFile = `export default ${nestedStringifiedContent};`; // const tsFile = `export default {\n ${objectAsTypescriptString(nestedContent)} \n}; \n`;
       // console.log(objectAsTypescriptString(nestedContent))
 

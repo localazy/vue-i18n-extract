@@ -109,14 +109,6 @@ export function removeUnusedFromLanguageFiles (parsedLanguageFiles: SimpleFile[]
   });
 }
 
-function objectAsTypescriptString (object: {[key: string]: string}): string {
-    return Object.entries(object)
-    .map(([key, value]) => {
-        return `  ${key}: '${value}'`
-    })
-    .join(',\n')
-}
-
 function writeLanguageFile (languageFile: SimpleFile, newLanguageFileContent: unknown) {
   const fileExtension = languageFile.fileName.substring(languageFile.fileName.lastIndexOf('.') + 1);
     const filePath = languageFile.path;
@@ -133,7 +125,6 @@ function writeLanguageFile (languageFile: SimpleFile, newLanguageFileContent: un
       fs.writeFileSync(filePath, yamlFile);
      } else if (fileExtension === 'ts') {
         const nestedStringifiedContent = JSON.stringify(nestedContent, null, 2);
-        console.log(`export default ${nestedStringifiedContent};`)
         const tsFile = `export default ${nestedStringifiedContent};`;
         // const tsFile = `export default {\n ${objectAsTypescriptString(nestedContent)} \n}; \n`;
         // console.log(objectAsTypescriptString(nestedContent))

@@ -20,13 +20,15 @@ export function resolveConfig (): Record<string, string>  {
     const pathToConfigFile = path.resolve(process.cwd(), './vue-i18n-extract.config.js');
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     const configFile = require(pathToConfigFile);
+    const exclude = argvOptions.exclude.filter(excluded => excluded !== undefined);
 
     console.info(`\nUsing config file found at ${pathToConfigFile}`);
-
-    return {
-      ...configFile,
-      ...argvOptions
-    };
+    const mergedOptions = {
+        ...configFile,
+        ...argvOptions
+    }
+    mergedOptions.exclude = [...exclude, ...(configFile.excludedKeys || [])];
+    return mergedOptions;
   } catch {
     return argvOptions;
   }
