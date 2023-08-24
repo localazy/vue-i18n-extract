@@ -41,7 +41,7 @@ export function readLanguageFiles (src: string): SimpleFile[] {
             .replace(/};/g, "}")
             .replace(/} ;/g, "}")
             .replace(/`/g, '"')
-        const keyPrefixRegex = new RegExp(/"en", { (\w+):/g)
+        const keyPrefixRegex = new RegExp(/"xxa", { "?([@\w]*)"?:/g)
         const keyPrefix = keyPrefixRegex.exec(indexFile)
         if (keyPrefix && keyPrefix[1]) {
             langObj = JSON.parse(jsonrepair(cleanContent));
