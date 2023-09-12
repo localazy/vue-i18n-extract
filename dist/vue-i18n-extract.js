@@ -1,10 +1,20 @@
-import cac from 'cac';
-import fs from 'fs';
-import path from 'path';
-import isValidGlob from 'is-valid-glob';
-import glob from 'glob';
-import Dot from 'dot-object';
-import yaml from 'js-yaml';
+var cac = require('cac');
+var fs = require('fs');
+var path = require('path');
+var isValidGlob = require('is-valid-glob');
+var glob = require('glob');
+var Dot = require('dot-object');
+var yaml = require('js-yaml');
+
+function _interopDefaultLegacy (e) { return e && typeof e === 'object' && 'default' in e ? e : { 'default': e }; }
+
+var cac__default = /*#__PURE__*/_interopDefaultLegacy(cac);
+var fs__default = /*#__PURE__*/_interopDefaultLegacy(fs);
+var path__default = /*#__PURE__*/_interopDefaultLegacy(path);
+var isValidGlob__default = /*#__PURE__*/_interopDefaultLegacy(isValidGlob);
+var glob__default = /*#__PURE__*/_interopDefaultLegacy(glob);
+var Dot__default = /*#__PURE__*/_interopDefaultLegacy(Dot);
+var yaml__default = /*#__PURE__*/_interopDefaultLegacy(yaml);
 
 function _extends() {
   _extends = Object.assign || function (target) {
@@ -37,17 +47,17 @@ var defaultConfig = {
 };
 
 function initCommand() {
-  fs.writeFileSync(path.resolve(process.cwd(), './vue-i18n-extract.config.js'), `module.exports = ${JSON.stringify(defaultConfig, null, 2)}`);
+  fs__default["default"].writeFileSync(path__default["default"].resolve(process.cwd(), './vue-i18n-extract.config.js'), `module.exports = ${JSON.stringify(defaultConfig, null, 2)}`);
 }
 function resolveConfig() {
-  const argvOptions = cac().parse(process.argv, {
+  const argvOptions = cac__default["default"]().parse(process.argv, {
     run: false
   }).options;
   const excluded = argvOptions.exclude;
   argvOptions.exclude = !Array.isArray(excluded) ? [excluded] : excluded;
 
   try {
-    const pathToConfigFile = path.resolve(process.cwd(), './vue-i18n-extract.config.js'); // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const pathToConfigFile = path__default["default"].resolve(process.cwd(), './vue-i18n-extract.config.js'); // eslint-disable-next-line @typescript-eslint/no-var-requires
 
     const configFile = require(pathToConfigFile);
 
@@ -64,11 +74,11 @@ function resolveConfig() {
 }
 
 function readVueFiles(src) {
-  if (!isValidGlob(src)) {
+  if (!isValidGlob__default["default"](src)) {
     throw new Error(`vueFiles isn't a valid glob pattern.`);
   }
 
-  const targetFiles = glob.sync(src);
+  const targetFiles = glob__default["default"].sync(src);
 
   if (targetFiles.length === 0) {
     throw new Error('vueFiles glob has no files.');
@@ -79,7 +89,7 @@ function readVueFiles(src) {
     return {
       fileName,
       path: f,
-      content: fs.readFileSync(f, 'utf8')
+      content: fs__default["default"].readFileSync(f, 'utf8')
     };
   });
 }
@@ -1045,18 +1055,18 @@ function parseEnd() {
 }
 
 function readLanguageFiles(src) {
-  if (!isValidGlob(src)) {
+  if (!isValidGlob__default["default"](src)) {
     throw new Error(`languageFiles isn't a valid glob pattern.`);
   }
 
-  const targetFiles = glob.sync(src);
+  const targetFiles = glob__default["default"].sync(src);
 
   if (targetFiles.length === 0) {
     throw new Error('languageFiles glob has no files.');
   }
 
   return targetFiles.map(f => {
-    const langPath = path.resolve(process.cwd(), f);
+    const langPath = path__default["default"].resolve(process.cwd(), f);
     const currentFolder = langPath.substring(0, langPath.lastIndexOf("/"));
     const localeIndexFile = `${currentFolder}/index.ts`;
     const extension = langPath.substring(langPath.lastIndexOf('.')).toLowerCase();
@@ -1066,12 +1076,12 @@ function readLanguageFiles(src) {
     let langObj;
 
     if (isJSON) {
-      langObj = JSON.parse(fs.readFileSync(langPath, 'utf8'));
+      langObj = JSON.parse(fs__default["default"].readFileSync(langPath, 'utf8'));
     } else if (isYAML) {
-      langObj = yaml.load(fs.readFileSync(langPath, 'utf8'));
+      langObj = yaml__default["default"].load(fs__default["default"].readFileSync(langPath, 'utf8'));
     } else if (isTS) {
-      const content = fs.readFileSync(langPath, 'utf8');
-      const indexFile = fs.readFileSync(localeIndexFile, 'utf8');
+      const content = fs__default["default"].readFileSync(langPath, 'utf8');
+      const indexFile = fs__default["default"].readFileSync(localeIndexFile, 'utf8');
       const cleanContent = content.replace("export default", "").replace(/};/g, "}").replace(/} ;/g, "}").replace(/`/g, '"'); // const keyPrefixRegex = new RegExp(/"xxa", { "?([@\w]*)"?:/g)
 
       const keyPrefixRegex = new RegExp(/loadLocalizationFiles\(\s+require.context\(\s+\".",\s+false,\s+\/\.\*\\\.ts\$\/,\s+\),\s+\"([@\w]*)/gm);
@@ -1086,7 +1096,7 @@ function readLanguageFiles(src) {
         throw new Error("Could not read key prefix from locale index file");
       }
     } else {
-      langObj = eval(fs.readFileSync(langPath, 'utf8'));
+      langObj = eval(fs__default["default"].readFileSync(langPath, 'utf8'));
     }
 
     const fileName = f.replace(process.cwd(), '.');
@@ -1097,7 +1107,7 @@ function readLanguageFiles(src) {
     };
   });
 }
-function extractI18NLanguageFromLanguageFiles(languageFiles, dot = Dot) {
+function extractI18NLanguageFromLanguageFiles(languageFiles, dot = Dot__default["default"]) {
   return languageFiles.reduce((accumulator, file) => {
     const language = file.fileName.substring(file.fileName.lastIndexOf('/') + 1, file.fileName.lastIndexOf('.'));
 
@@ -1115,7 +1125,7 @@ function extractI18NLanguageFromLanguageFiles(languageFiles, dot = Dot) {
     return accumulator;
   }, {});
 }
-function writeMissingToLanguageFiles(parsedLanguageFiles, missingKeys, dot = Dot) {
+function writeMissingToLanguageFiles(parsedLanguageFiles, missingKeys, dot = Dot__default["default"]) {
   parsedLanguageFiles.forEach(languageFile => {
     const languageFileContent = JSON.parse(languageFile.content);
     missingKeys.forEach(item => {
@@ -1126,7 +1136,7 @@ function writeMissingToLanguageFiles(parsedLanguageFiles, missingKeys, dot = Dot
     writeLanguageFile(languageFile, languageFileContent);
   });
 }
-function removeUnusedFromLanguageFiles(parsedLanguageFiles, unusedKeys, dot = Dot) {
+function removeUnusedFromLanguageFiles(parsedLanguageFiles, unusedKeys, dot = Dot__default["default"]) {
   parsedLanguageFiles.forEach(languageFile => {
     const languageFileContent = JSON.parse(languageFile.content);
     unusedKeys.forEach(item => {
@@ -1145,18 +1155,18 @@ function writeLanguageFile(languageFile, newLanguageFileContent) {
   const stringifiedContent = JSON.stringify(newLanguageFileContent, null, 2);
 
   if (fileExtension === 'json') {
-    fs.writeFileSync(filePath, stringifiedContent);
+    fs__default["default"].writeFileSync(filePath, stringifiedContent);
   } else if (fileExtension === 'js') {
     const jsFile = `module.exports = ${stringifiedContent}; \n`;
-    fs.writeFileSync(filePath, jsFile);
+    fs__default["default"].writeFileSync(filePath, jsFile);
   } else if (fileExtension === 'yaml' || fileExtension === 'yml') {
-    const yamlFile = yaml.dump(newLanguageFileContent);
-    fs.writeFileSync(filePath, yamlFile);
+    const yamlFile = yaml__default["default"].dump(newLanguageFileContent);
+    fs__default["default"].writeFileSync(filePath, yamlFile);
   } else if (fileExtension === 'ts') {
     const nestedStringifiedContent = JSON.stringify(nestedContent, null, 2);
     const unquotedContent = unquotePropertiesFromJSONString(nestedStringifiedContent);
     const tsFile = `export default ${unquotedContent};`;
-    fs.writeFileSync(filePath, tsFile);
+    fs__default["default"].writeFileSync(filePath, tsFile);
   } else {
     throw new Error(`Language filetype of ${fileExtension} not supported.`);
   }
@@ -1169,7 +1179,7 @@ function unquotePropertiesFromJSONString(stringifiedObject) {
 } // This is a convenience function for users implementing in their own projects, and isn't used internally
 
 
-function parselanguageFiles(languageFiles, dot = Dot) {
+function parselanguageFiles(languageFiles, dot = Dot__default["default"]) {
   return extractI18NLanguageFromLanguageFiles(readLanguageFiles(languageFiles), dot);
 }
 
@@ -1210,7 +1220,7 @@ function extractI18NReport(vueItems, languageFiles) {
 async function writeReportToFile(report, writePath) {
   const reportString = JSON.stringify(report);
   return new Promise((resolve, reject) => {
-    fs.writeFile(writePath, reportString, err => {
+    fs__default["default"].writeFile(writePath, reportString, err => {
       if (err) {
         reject(err);
         return;
@@ -1234,9 +1244,9 @@ async function createI18NReport(options) {
   } = options;
   if (!vueFilesGlob) throw new Error('Required configuration vueFiles is missing.');
   if (!languageFilesGlob) throw new Error('Required configuration languageFiles is missing.');
-  const dot = typeof separator === 'string' ? new Dot(separator) : Dot;
-  const vueFiles = readVueFiles(path.resolve(process.cwd(), vueFilesGlob));
-  const languageFiles = readLanguageFiles(path.resolve(process.cwd(), languageFilesGlob));
+  const dot = typeof separator === 'string' ? new Dot__default["default"](separator) : Dot__default["default"];
+  const vueFiles = readVueFiles(path__default["default"].resolve(process.cwd(), vueFilesGlob));
+  const languageFiles = readLanguageFiles(path__default["default"].resolve(process.cwd(), languageFilesGlob));
   const I18NItems = extractI18NItemsFromVueFiles(vueFiles);
   const I18NLanguage = extractI18NLanguageFromLanguageFiles(languageFiles, dot);
   const report = extractI18NReport(I18NItems, I18NLanguage);
@@ -1246,7 +1256,7 @@ async function createI18NReport(options) {
   if (report.maybeDynamicKeys.length) console.warn('\nSuspected Dynamic Keys Found\nvue-i18n-extract does not compile Vue templates and therefore can not infer the correct key for the following keys.'), console.table(report.maybeDynamicKeys);
 
   if (output) {
-    await writeReportToFile(report, path.resolve(process.cwd(), output));
+    await writeReportToFile(report, path__default["default"].resolve(process.cwd(), output));
     console.info(`\nThe report has been has been saved to ${output}`);
   }
 
@@ -1280,5 +1290,17 @@ process.on('unhandledRejection', err => {
   process.exit(1);
 });
 
-export { createI18NReport, extractI18NItemsFromVueFiles, extractI18NLanguageFromLanguageFiles, extractI18NReport, initCommand, parseVueFiles, parselanguageFiles, readLanguageFiles, readVueFiles, removeUnusedFromLanguageFiles, resolveConfig, writeMissingToLanguageFiles, writeReportToFile };
-//# sourceMappingURL=vue-i18n-extract.modern.mjs.map
+exports.createI18NReport = createI18NReport;
+exports.extractI18NItemsFromVueFiles = extractI18NItemsFromVueFiles;
+exports.extractI18NLanguageFromLanguageFiles = extractI18NLanguageFromLanguageFiles;
+exports.extractI18NReport = extractI18NReport;
+exports.initCommand = initCommand;
+exports.parseVueFiles = parseVueFiles;
+exports.parselanguageFiles = parselanguageFiles;
+exports.readLanguageFiles = readLanguageFiles;
+exports.readVueFiles = readVueFiles;
+exports.removeUnusedFromLanguageFiles = removeUnusedFromLanguageFiles;
+exports.resolveConfig = resolveConfig;
+exports.writeMissingToLanguageFiles = writeMissingToLanguageFiles;
+exports.writeReportToFile = writeReportToFile;
+//# sourceMappingURL=vue-i18n-extract.js.map

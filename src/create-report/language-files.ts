@@ -41,7 +41,8 @@ export function readLanguageFiles (src: string): SimpleFile[] {
             .replace(/};/g, "}")
             .replace(/} ;/g, "}")
             .replace(/`/g, '"')
-        const keyPrefixRegex = new RegExp(/"xxa", { "?([@\w]*)"?:/g)
+        // const keyPrefixRegex = new RegExp(/"xxa", { "?([@\w]*)"?:/g)
+        const keyPrefixRegex = new RegExp(/loadLocalizationFiles\(\s+require.context\(\s+\".",\s+false,\s+\/\.\*\\\.ts\$\/,\s+\),\s+\"([@\w]*)/gm)
         const keyPrefix = keyPrefixRegex.exec(indexFile)
         if (keyPrefix && keyPrefix[1]) {
             langObj = JSON.parse(jsonrepair(cleanContent));
@@ -125,13 +126,18 @@ function writeLanguageFile (languageFile: SimpleFile, newLanguageFileContent: un
       fs.writeFileSync(filePath, yamlFile);
      } else if (fileExtension === 'ts') {
         const nestedStringifiedContent = JSON.stringify(nestedContent, null, 2);
-        const tsFile = `export default ${nestedStringifiedContent};`;
-        // const tsFile = `export default {\n ${objectAsTypescriptString(nestedContent)} \n}; \n`;
-        // console.log(objectAsTypescriptString(nestedContent))
+        const unquotedContent = unquotePropertiesFromJSONString(nestedStringifiedContent);
+        const tsFile = `export default ${unquotedContent};`;
         fs.writeFileSync(filePath, tsFile);
     } else {
       throw new Error(`Language filetype of ${fileExtension} not supported.`)
     }
+}
+
+function unquotePropertiesFromJSONString(stringifiedObject: string) {
+  return stringifiedObject.replace(/^[\t ]*"[^:\n\r]+(?<!\\)":/gm, function (match) {
+      return match.replace(/"/g, "");
+  });
 }
 
 // This is a convenience function for users implementing in their own projects, and isn't used internally
