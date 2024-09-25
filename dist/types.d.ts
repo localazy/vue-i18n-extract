@@ -7,7 +7,15 @@ export declare type ReportOptions = {
     remove?: boolean;
     ci?: boolean;
     separator?: string;
+    noEmptyTranslation?: string;
+    missingTranslationString?: string;
+    detect?: DetectionType[];
 };
+export declare enum DetectionType {
+    Missing = "missing",
+    Unused = "unused",
+    Dynamic = "dynamic"
+}
 export declare type SimpleFile = {
     fileName: string;
     path: string;

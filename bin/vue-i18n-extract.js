@@ -39,6 +39,18 @@ cli
     '--exclude <key>',
     'Use if you want to exclude a key. It can be used multiple times to exclude any amount of keys on the output'
    )
+  .option(
+    '--noEmptyTranslation',
+    'Use if you want to generate a default translated string by using the key itself'
+   )
+  .option(
+    '--missingTranslationString',
+    'Default string for missing translations.'
+   )
+   .option(
+    '--detect <detectionType>',
+    '[string] The type of issues you want to detect (ex. --detect missing) ',
+  )
   .action((options) => {
     createI18NReport(resolveConfig(options));
   });

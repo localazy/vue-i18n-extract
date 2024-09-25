@@ -28,12 +28,14 @@ var defaultConfig = {
   // Options documented in vue-i18n-extract readme.
   vueFiles: './src/**/*.?(js|vue)',
   languageFiles: './lang/**/*.?(json|yaml|yml|js)',
-  excludedKeys: [],
+  exclude: [],
   output: false,
   add: false,
   remove: false,
   ci: false,
-  separator: '.'
+  separator: '.',
+  noEmptyTranslation: '',
+  missingTranslationString: ''
 };
 
 function initCommand() {
@@ -43,8 +45,7 @@ function resolveConfig() {
   const argvOptions = cac().parse(process.argv, {
     run: false
   }).options;
-  const excluded = argvOptions.exclude;
-  argvOptions.exclude = !Array.isArray(excluded) ? [excluded] : excluded;
+  let options;
 
   try {
     const pathToConfigFile = path.resolve(process.cwd(), './vue-i18n-extract.config.js'); // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -59,16 +60,31 @@ function resolveConfig() {
     mergedOptions.exclude = [...exclude, ...(configFile.excludedKeys || [])];
     return mergedOptions;
   } catch (_unused) {
-    return argvOptions;
+    options = argvOptions;
   }
+
+  options.exclude = Array.isArray(options.exclude) ? options.exclude : [options.exclude];
+  return options;
 }
 
+var DetectionType;
+
+(function (DetectionType) {
+  DetectionType["Missing"] = "missing";
+  DetectionType["Unused"] = "unused";
+  DetectionType["Dynamic"] = "dynamic";
+})(DetectionType || (DetectionType = {}));
+
 function readVueFiles(src) {
-  if (!isValidGlob(src)) {
+  // Replace backslash path segments to make the path work with the glob package.
+  // https://github.com/Spittal/vue-i18n-extract/issues/159
+  const normalizedSrc = src.replace(/\\/g, '/');
+
+  if (!isValidGlob(normalizedSrc)) {
     throw new Error(`vueFiles isn't a valid glob pattern.`);
   }
 
-  const targetFiles = glob.sync(src);
+  const targetFiles = glob.sync(normalizedSrc);
 
   if (targetFiles.length === 0) {
     throw new Error('vueFiles glob has no files.');
@@ -138,12 +154,12 @@ function extractMethodMatches(file) {
 }
 
 function extractComponentMatches(file) {
-  const componentRegExp = /(?:(?:<|h\()(?:i18n|Translation))(?:.|\n)*?(?:[^:]path(?:=|: )("|'))((?:[^\\]|\\.)*?)\1/gi;
+  const componentRegExp = /(?:(?:<|h\()(?:i18n|Translation))(?:.|\n)*?(?:\s(?:(?:key)?)path(?:=|: )("|'))((?:[^\\]|\\.)*?)\1/gi;
   return [...getMatches(file, componentRegExp, 2)];
 }
 
 function extractDirectiveMatches(file) {
-  const directiveRegExp = /v-t(?:.*)="'((?:[^\\]|\\.)*?)'"/g;
+  const directiveRegExp = /\bv-t(?:\.[\w-]+)?="'((?:[^\\]|\\.)*?)'"/g;
   return [...getMatches(file, directiveRegExp)];
 }
 
@@ -1045,11 +1061,15 @@ function parseEnd() {
 }
 
 function readLanguageFiles(src) {
-  if (!isValidGlob(src)) {
+  // Replace backslash path segments to make the path work with the glob package.
+  // https://github.com/Spittal/vue-i18n-extract/issues/159
+  const normalizedSrc = src.replace(/\\/g, '/');
+
+  if (!isValidGlob(normalizedSrc)) {
     throw new Error(`languageFiles isn't a valid glob pattern.`);
   }
 
-  const targetFiles = glob.sync(src);
+  const targetFiles = glob.sync(normalizedSrc);
 
   if (targetFiles.length === 0) {
     throw new Error('languageFiles glob has no files.');
@@ -1115,12 +1135,13 @@ function extractI18NLanguageFromLanguageFiles(languageFiles, dot = Dot) {
     return accumulator;
   }, {});
 }
-function writeMissingToLanguageFiles(parsedLanguageFiles, missingKeys, dot = Dot) {
+function writeMissingToLanguageFiles(parsedLanguageFiles, missingKeys, dot = Dot, noEmptyTranslation = '', missingTranslationString = '') {
   parsedLanguageFiles.forEach(languageFile => {
     const languageFileContent = JSON.parse(languageFile.content);
     missingKeys.forEach(item => {
       if (item.language && languageFile.fileName.includes(item.language) || !item.language) {
-        dot.str(item.path, '', languageFileContent);
+        const addDefaultTranslation = noEmptyTranslation && (noEmptyTranslation === '*' || noEmptyTranslation === item.language);
+        dot.str(item.path, addDefaultTranslation ? item.path : missingTranslationString === 'null' ? null : missingTranslationString, languageFileContent);
       }
     });
     writeLanguageFile(languageFile, languageFileContent);
@@ -1186,20 +1207,31 @@ function mightBeDynamic(item) {
 } // Looping through the arays multiple times might not be the most effecient, but it's the easiest to read and debug. Which at this scale is an accepted trade-off.
 
 
-function extractI18NReport(vueItems, languageFiles) {
+function extractI18NReport(vueItems, languageFiles, detect) {
   const missingKeys = [];
   const unusedKeys = [];
-  const maybeDynamicKeys = vueItems.filter(vueItem => mightBeDynamic(vueItem)).map(vueItem => stripBounding(vueItem));
+  const maybeDynamicKeys = [];
+
+  if (detect.includes(DetectionType.Dynamic)) {
+    maybeDynamicKeys.push(...vueItems.filter(vueItem => mightBeDynamic(vueItem)).map(vueItem => stripBounding(vueItem)));
+  }
+
   Object.keys(languageFiles).forEach(language => {
     const languageItems = languageFiles[language];
-    const missingKeysInLanguage = vueItems.filter(vueItem => !mightBeDynamic(vueItem)).filter(vueItem => !languageItems.some(languageItem => vueItem.path === languageItem.path)).map(vueItem => _extends({}, stripBounding(vueItem), {
-      language
-    }));
-    const unusedKeysInLanguage = languageItems.filter(languageItem => !vueItems.some(vueItem => languageItem.path === vueItem.path || languageItem.path.startsWith(vueItem.path + '.'))).map(languageItem => _extends({}, languageItem, {
-      language
-    }));
-    missingKeys.push(...missingKeysInLanguage);
-    unusedKeys.push(...unusedKeysInLanguage);
+
+    if (detect.includes(DetectionType.Missing)) {
+      const missingKeysInLanguage = vueItems.filter(vueItem => !mightBeDynamic(vueItem)).filter(vueItem => !languageItems.some(languageItem => vueItem.path === languageItem.path)).map(vueItem => _extends({}, stripBounding(vueItem), {
+        language
+      }));
+      missingKeys.push(...missingKeysInLanguage);
+    }
+
+    if (detect.includes(DetectionType.Unused)) {
+      const unusedKeysInLanguage = languageItems.filter(languageItem => !vueItems.some(vueItem => languageItem.path === vueItem.path || languageItem.path.startsWith(vueItem.path + '.'))).map(languageItem => _extends({}, languageItem, {
+        language
+      }));
+      unusedKeys.push(...unusedKeysInLanguage);
+    }
   });
   return {
     missingKeys,
@@ -1230,16 +1262,26 @@ async function createI18NReport(options) {
     remove,
     exclude = [],
     ci,
-    separator
+    separator,
+    noEmptyTranslation = '',
+    missingTranslationString = '',
+    detect = [DetectionType.Missing, DetectionType.Unused, DetectionType.Dynamic]
   } = options;
   if (!vueFilesGlob) throw new Error('Required configuration vueFiles is missing.');
   if (!languageFilesGlob) throw new Error('Required configuration languageFiles is missing.');
+  let issuesToDetect = Array.isArray(detect) ? detect : [detect];
+  const invalidDetectOptions = issuesToDetect.filter(item => !Object.values(DetectionType).includes(item));
+
+  if (invalidDetectOptions.length) {
+    throw new Error(`Invalid 'detect' value(s): ${invalidDetectOptions}`);
+  }
+
   const dot = typeof separator === 'string' ? new Dot(separator) : Dot;
   const vueFiles = readVueFiles(path.resolve(process.cwd(), vueFilesGlob));
   const languageFiles = readLanguageFiles(path.resolve(process.cwd(), languageFilesGlob));
   const I18NItems = extractI18NItemsFromVueFiles(vueFiles);
   const I18NLanguage = extractI18NLanguageFromLanguageFiles(languageFiles, dot);
-  const report = extractI18NReport(I18NItems, I18NLanguage);
+  const report = extractI18NReport(I18NItems, I18NLanguage, issuesToDetect);
   report.unusedKeys = report.unusedKeys.filter(key => !exclude.filter(excluded => key.path.startsWith(excluded)).length);
   if (report.missingKeys.length) console.info('\nMissing Keys'), console.table(report.missingKeys);
   if (report.unusedKeys.length) console.info('\nUnused Keys'), console.table(report.unusedKeys);
@@ -1256,7 +1298,7 @@ async function createI18NReport(options) {
   }
 
   if (add && report.missingKeys.length) {
-    writeMissingToLanguageFiles(languageFiles, report.missingKeys, dot);
+    writeMissingToLanguageFiles(languageFiles, report.missingKeys, dot, noEmptyTranslation, missingTranslationString);
     console.info('\nThe missing keys have been added to your language files.');
   }
 
@@ -1280,5 +1322,5 @@ process.on('unhandledRejection', err => {
   process.exit(1);
 });
 
-export { createI18NReport, extractI18NItemsFromVueFiles, extractI18NLanguageFromLanguageFiles, extractI18NReport, initCommand, parseVueFiles, parselanguageFiles, readLanguageFiles, readVueFiles, removeUnusedFromLanguageFiles, resolveConfig, writeMissingToLanguageFiles, writeReportToFile };
+export { DetectionType, createI18NReport, extractI18NItemsFromVueFiles, extractI18NLanguageFromLanguageFiles, extractI18NReport, initCommand, parseVueFiles, parselanguageFiles, readLanguageFiles, readVueFiles, removeUnusedFromLanguageFiles, resolveConfig, writeMissingToLanguageFiles, writeReportToFile };
 //# sourceMappingURL=vue-i18n-extract.modern.mjs.map
