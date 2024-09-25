@@ -4,11 +4,14 @@ import glob from 'glob';
 import fs from 'fs';
 
 export function readVueFiles (src: string): SimpleFile[] {
-  if (!isValidGlob(src)) {
+  // Replace backslash path segments to make the path work with the glob package.
+  // https://github.com/Spittal/vue-i18n-extract/issues/159
+  const normalizedSrc = src.replace(/\\/g, '/');
+  if (!isValidGlob(normalizedSrc)) {
     throw new Error(`vueFiles isn't a valid glob pattern.`);
   }
 
-  const targetFiles = glob.sync(src);
+  const targetFiles = glob.sync(normalizedSrc);
 
   if (targetFiles.length === 0) {
     throw new Error('vueFiles glob has no files.');
@@ -73,12 +76,12 @@ function* getMatches (file: SimpleFile, regExp: RegExp, captureGroup = 1): Itera
 }
 
 function extractComponentMatches (file: SimpleFile): I18NItemWithBounding[] {
-  const componentRegExp = /(?:(?:<|h\()(?:i18n|Translation))(?:.|\n)*?(?:[^:]path(?:=|: )("|'))((?:[^\\]|\\.)*?)\1/gi;
+  const componentRegExp = /(?:(?:<|h\()(?:i18n|Translation))(?:.|\n)*?(?:\s(?:(?:key)?)path(?:=|: )("|'))((?:[^\\]|\\.)*?)\1/gi;
   return [ ...getMatches(file, componentRegExp, 2) ];
 }
 
 function extractDirectiveMatches (file: SimpleFile): I18NItemWithBounding[] {
-  const directiveRegExp = /v-t(?:.*)="'((?:[^\\]|\\.)*?)'"/g;
+  const directiveRegExp = /\bv-t(?:\.[\w-]+)?="'((?:[^\\]|\\.)*?)'"/g;
   return [ ...getMatches(file, directiveRegExp) ];
 }
 
