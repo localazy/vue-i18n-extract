@@ -8,11 +8,14 @@ import { SimpleFile, I18NLanguage, I18NItem } from '../types';
 import jsonrepair from "jsonrepair"
 
 export function readLanguageFiles (src: string): SimpleFile[] {
-  if (!isValidGlob(src)) {
+  // Replace backslash path segments to make the path work with the glob package.
+  // https://github.com/Spittal/vue-i18n-extract/issues/159
+  const normalizedSrc = src.replace(/\\/g, '/');
+  if (!isValidGlob(normalizedSrc)) {
     throw new Error(`languageFiles isn't a valid glob pattern.`);
   }
 
-  const targetFiles = glob.sync(src);
+  const targetFiles = glob.sync(normalizedSrc);
 
   if (targetFiles.length === 0) {
     throw new Error('languageFiles glob has no files.');
@@ -82,13 +85,14 @@ export function extractI18NLanguageFromLanguageFiles (languageFiles: SimpleFile[
   }, {});
 }
 
-export function writeMissingToLanguageFiles (parsedLanguageFiles: SimpleFile[], missingKeys: I18NItem[], dot: DotObject.Dot = Dot): void {
+export function writeMissingToLanguageFiles (parsedLanguageFiles: SimpleFile[], missingKeys: I18NItem[], dot: DotObject.Dot = Dot, noEmptyTranslation = '', missingTranslationString = ''): void {
   parsedLanguageFiles.forEach(languageFile => {
     const languageFileContent = JSON.parse(languageFile.content);
 
     missingKeys.forEach(item => {
       if (item.language && languageFile.fileName.includes(item.language) || !item.language) {
-        dot.str(item.path, '', languageFileContent);
+        const addDefaultTranslation = (noEmptyTranslation) && ((noEmptyTranslation === '*') || (noEmptyTranslation === item.language));
+        dot.str(item.path, addDefaultTranslation ? item.path : missingTranslationString === 'null' ? null : missingTranslationString, languageFileContent);
       }
     });
 
