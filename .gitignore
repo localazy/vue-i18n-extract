@@ -6,3 +6,4 @@ node_modules
 !.yarn/plugins
 *.log
 vue-i18n-extract.config.js
+dist
