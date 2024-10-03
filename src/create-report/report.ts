@@ -46,7 +46,7 @@ export function extractI18NReport (vueItems: I18NItemWithBounding[], languageFil
 }
 
 export async function writeReportToFile (report: I18NReport, writePath: string): Promise<NodeJS.ErrnoException | void> {
-  const reportString = JSON.stringify(report);
+  const reportString = JSON.stringify(report, null, 2);
   return new Promise((resolve, reject) => {
     fs.writeFile(
       writePath,
