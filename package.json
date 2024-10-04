@@ -12,6 +12,9 @@
     "test:dev": "jest --watch",
     "lint": "eslint **/*.ts"
   },
+  "files": [
+    "dist"
+  ],
   "license": "MIT",
   "source": "src/index.ts",
   "bin": "bin/vue-i18n-extract.js",

@@ -73,7 +73,8 @@ function* getMatches (file: SimpleFile, regExp: RegExp, captureGroup = 1): Itera
 }
 
 function extractComponentMatches (file: SimpleFile): I18NItemWithBounding[] {
-  const componentRegExp = /(?:(?:<|h\()(?:i18n|Translation))(?:.|\n)*?(?:[^:]path(?:=|: )("|'))((?:[^\\]|\\.)*?)\1/gi;
+  // Updated: It excludes paths with "/"
+  const componentRegExp = /(?:(?:<|h\()(?:i18n|Translation))(?:.|\n)*?(?:[^:]path(?:=|: )("|'))([^/\\]*?)\1/gi;
   return [ ...getMatches(file, componentRegExp, 2) ];
 }
 
