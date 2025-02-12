@@ -44,8 +44,10 @@ export function readLanguageFiles (src: string): SimpleFile[] {
             .replace(/};/g, "}")
             .replace(/} ;/g, "}")
             .replace(/`/g, '"')
+            // JSONRepair doesn't like apostrophes
+            .replace(/’/g, "\\'")
         // const keyPrefixRegex = new RegExp(/"xxa", { "?([@\w]*)"?:/g)
-        const keyPrefixRegex = new RegExp(/prefix: "(.+)",/gm)
+        const keyPrefixRegex = new RegExp(/module: '(.+)',/gm)
         const keyPrefix = keyPrefixRegex.exec(indexFile)
         if (keyPrefix && keyPrefix[1]) {
             langObj = JSON.parse(jsonrepair(cleanContent));
